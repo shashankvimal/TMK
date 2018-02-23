@@ -22,15 +22,19 @@ typedef enum{WDT_INTERNAL_OSC_CLK, WDT_PERIPHERAL_CLK, WDT_REAL_TIME_CLK, }WDT_C
 typedef struct initParam
 {	     
 	/*Timeout value if user does not provide or set it explicitly.                   */
-	uint32_t defaultTmOut;	 
-	/*{WDT_MODE_INT_EN, WDT_MODE_INT_DIS}tells if WDT can raise interrupt.          */
-	uint8_t mode;
+	uint32_t timeout;
+	/*Reset logging callback*/
+	void(*LogOnResetCallback)(uint8_t *pMemDump);
+	/*{WDT_MODE_RESET_WITH_LOG_EN, WDT_MODE_RESET_WITHOUT_LOG_EN}tells if WDT can raise interrupt.          */
+	uint8_t resetOnExpiry;
 	/*{CLK_SRC_LOCKED, CLK_SRC_UNLOCKED}tells if clk src change to WDT is possible.*/				 
 	uint8_t timeRebaseNeeded;
 	/*Enable wdt*/
 	uint8_t enableWdt;
 	/*Select the source of clock for WDT timer block.                                 */
-	uint8_t runOnSleepNeeded; 
+	uint8_t runOnSleepNeeded;
+	/*Select the time unit: {WDT_TIMEOUT_UNIT_USEC, WDT_TIMEOUT_UNIT_MSEC}*/
+	uint8_t timeUnit;
 }WDT_INIT_PARAM_t;
 
 uint32_t 
@@ -38,8 +42,10 @@ wdt_init(WDT_INIT_PARAM_t *pParam)
 {
 	if(wdt_validInitParam(pParam))
 	{
-		WATCHDOG_TIMER->WDCLKSEL  = (pParam->clkSrc | pParam->clkSrc2BeLocked ? (1 << 31) : 0);
-		WATCHDOG_TIMER->WDTC  = wdt_convertTm2Ticks(pParam->defaultTmOut);
+		WATCHDOG_TIMER->WDCLKSEL  = wdt_determineClkSrc(pParam->timeUnit,
+														pParam->runOnSleepNeeded) |\
+									pParam->timeRebaseNeeded ? (1 << 31) : 0);
+		WATCHDOG_TIMER->WDTC  = wdt_convertTm2Ticks(pParam->timeout);
 		WATCHDOG_TIMER->WDMOD = 0x0;
 		WATCHDOG_TIMER->WDMOD = (pParam->mode | (pParam->enableWdt == 1));	
 		return 1;
@@ -58,7 +64,10 @@ uint32_t wdt_feed(void)
 	}
 	return 0;
 }
-
+INLINE static uint8_t wdt_determineClkSrc(uint32_t timeUnit, uint32_t runOnSleep)
+{
+	
+}
 INLINE static uint32_t wdt_validCfgParam(WDT_INIT_PARAM_t *pParam)
 {
 	return (pParam->clkSrc >= 0 && pParam->clkSrc < 0x3) &&
