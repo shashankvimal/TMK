@@ -5,6 +5,8 @@
 #define BASE_ADR_WDT				(0x40000000)
 #define WATCHDOG_TIMER				(WDT_t*)(BASE_ADR_WDT)
 #define WATCHDOG_TIMER_ENABLED() 	(WATCHDOG_TIMER->WDMOD & 0x1)
+#define WDT_TIMEOUT_UNIT_USEC       (0)
+#define WDT_TIMEOUT_UNIT_MSEC       !(WDT_TIMEOUT_UNIT_USEC)
 typedef volatile struct wdt
 {
 	/*RW*/uint32_t WDMOD;			  
@@ -40,18 +42,44 @@ typedef struct initParam
 	uint8_t timeUnit;
 }WDT_INIT_PARAM_t;
 
+typedef struct cfg
+{	     
+	/*Reset logging callback*/
+	void(*LogOnResetCallback)(uint8_t *pMemDump);
+	/*{WDT_MODE_RESET_WITHOUT_LOG_EN, WDT_MODE_RESET_WITH_LOG_EN}tells if WDT can raise interrupt.          */
+	uint8_t resetOnExpiry;
+	/*{CLK_SRC_LOCKED, CLK_SRC_UNLOCKED}tells if clk src change to WDT is possible.*/				 
+	uint8_t timeRebaseNeeded;
+
+	/*Select the source of clock for WDT timer block.                                 */
+	uint8_t runOnSleepNeeded;
+	/*Select the time unit: {WDT_TIMEOUT_UNIT_USEC, WDT_TIMEOUT_UNIT_MSEC}*/
+	uint8_t timeUnit;
+}WDT_CFG_t;
+WDT_CFG_t wdgCfg;
+
 uint32_t 
 wdt_init(WDT_INIT_PARAM_t *pParam)
 {
 	WDT_CLK_SRC_e wdtClkSrc;
 	if(wdt_validInitParam(pParam))
 	{
-		wdtClkSrc =  wdt_determineClkSrc(pParam->timeUnit, pParam->runOnSleepNeeded);
+		/*Disable Watchdog HW unit*/
+		WATCHDOG_TIMER->WDMOD     = 0x0;
+		/*Determine the clock source*/
+		wdtClkSrc                 =  wdt_determineClkSrc(pParam->timeUnit, pParam->runOnSleepNeeded);
+		/*Set the clock source and lock it if the user sets so*/
 		WATCHDOG_TIMER->WDCLKSEL  = wdtClkSrc | (pParam->timeRebaseNeeded ? (1 << 31) : 0);					
-		WATCHDOG_TIMER->WDTC  = wdt_convertTm2Ticks(pParam->timeout, wdtClkSrc);
-		WATCHDOG_TIMER->WDMOD = 0x0;
-		WATCHDOG_TIMER->WDMOD = (resetOnExpiry ? pParam->mode | (pParam->enableWdt == 1));	
-		return 1;
+		/*Load the watchdog timer's counter register*/
+		WATCHDOG_TIMER->WDTC      = wdt_convertTm2Ticks(pParam->timeout, wdtClkSrc);
+		/*Apply final configuration to watchdog timer*/
+		WATCHDOG_TIMER->WDMOD     = (resetOnExpiry ? pParam->mode | (pParam->enableWdt == 1));
+		
+		wdgCfg.LogOnResetCallback = pParam->LogOnResetCallback;
+		wdgCfg.resetOnExpiry      = pParam->resetOnExpiry;
+		wdgCfg.timeRebaseNeeded   = pParam->timeRebaseNeeded;
+		wdgCfg.runOnSleepNeeded   = pParam->runOnSleepNeeded;
+		wdgCfg.timeUnit           = pParam->timeUnit;
 	}
 	return 0;
 
@@ -107,9 +135,23 @@ uint32_t wdt_remainingTime4Trigger()
 	/*Set the scaling factor*/
 	/*Read the current count register*/
 }
+INLINE static uint32_t
+wdt_timeRebaseAllowed()
+{
+	return ((WATCHDOG_TIMER->WDCLKSEL & (1 << 31)) >> 31);
+}
+INLINE static uint32_t
+wdt_timeRebaseNeeded(uint32_t tmUnit)
+{
+	return (tmUnit != wdgCfg.timeUnit && tmUnit <= WDT_TIMEOUT_UNIT_MSEC);
+}
 uint32_t wdt_reloadTimeout(uint32_t newTimeoutVal, uint32_t tmUnit)
 {
-
+    if(wdt_timeRebaseNeeded(tmUnit))
+	   if(wdt_timeRebaseAllowed())
+		   wdt_modifyClkSrc();
+	   else
+		   return 0;
 }
 INLINE static uint32_t 
 wdt_convertTm2Ticks(uint32_t timeout, 

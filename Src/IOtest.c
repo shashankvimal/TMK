@@ -1,11 +1,7 @@
 /*****************************************************************************
  *   iotest.c:  main C entry file for NXP LPC17xx Family Microprocessors
  *
- *   Copyright(C) 2009, NXP Semiconductor
- *   All rights reserved.
  *
- *   History
- *   2009.05.26  ver 1.00    Preliminary version, first Release
  *
 ******************************************************************************/
 
@@ -15,7 +11,6 @@
 #include "spi.h"
 #include "timer.h"
 #include <utils.h>
-#include "timer.h"
 
 
 void user_waitover(void *pSpinOverVar);
