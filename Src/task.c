@@ -6,20 +6,20 @@
 * @date 3/18/2018
 */
 
-ypedef  struct task
+typedef  struct task
 {
-	/*RW*/uint32_t tUpperSentinel;
-	/*RW*/LIST_t tlist;
-	/*WO*/uint32_t(key) tld;
-	/*RO*/uint32_t tPriority;
-	/*RW*/TMK_TASK_STATE_e tState;
-	/*RW*/TMK_TASK_TYPE_e tType;
-	/*RW*/MAILBOX_t tMailbox;
-	/*RW*/EVENT_STATE_MATRIX[][] tAppStateMachine;
-	/*RW*/TMK_CORE_CONTEXT_t tContext;
-	/*RW*/uint32_t (*tAppCurState)();
-	/*RW*/void (*tEntryPoint)();
-	/*RW*/void (*tOnReset)();
-	/*RW*/uint32_t tLowerSentinel;
+	uint32_t tUpperSentinel;
+	NODE_t tlist;
+	uint32_t(key) tld;
+	uint32_t tPriority;
+	TMK_TASK_STATE_e tState;
+	TMK_TASK_TYPE_e tType;
+	MAILBOX_t tMailbox;
+	EVENT_STATE_MATRIX[][] tAppStateMachine;
+	TMK_CORE_CONTEXT_t tContext;
+	uint32_t (*tAppCurState)();
+	void (*tEntryPoint)();
+	void (*tOnReset)();
+	uint32_t tLowerSentinel;
 	
-}task_t;
+}TASK_t;

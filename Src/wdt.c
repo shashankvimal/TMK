@@ -1,3 +1,9 @@
+/**
+* @file wdt.c
+* @brief This file contains implementation of watchdog driver
+* @author  SHASHANK VIMAL
+* @date 3/24/2018
+*/
 #include "lpc17xx.h"
 #include "type.h"
 #include "utils.h"
@@ -58,6 +64,104 @@ typedef struct cfg
 }WDT_CFG_t;
 WDT_CFG_t wdgCfg;
 
+
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+INLINE static WDT_CLK_SRC_e 
+wdt_determineClkSrc(uint32_t timeUnit,
+                    uint32_t runOnSleep)
+{
+	if(runOnSleep == TRUE)
+	{
+		return WDT_INTERNAL_OSC_CLK;
+	}
+	if(timeUnit = WDT_TIMEOUT_UNIT_USEC)
+	{
+		return WDT_PERIPHERAL_CLK;
+	}
+	if(timeUnit = WDT_TIMEOUT_UNIT_MSEC)
+	{
+		return WDT_REAL_TIME_CLK;
+	}
+	return WDT_INVALID_CLK;
+}
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+INLINE static uint32_t 
+wdt_validCfgParam(WDT_INIT_PARAM_t *pParam)
+{
+	return (pParam->clkSrc >= 0 && pParam->clkSrc < 0x3) &&
+		   (pParam->timeRebaseNeeded <= 0x1) &&
+}
+
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+INLINE static uint32_t
+wdt_timeRebaseAllowed()
+{
+	return ((WATCHDOG_TIMER->WDCLKSEL & (1 << 31)) >> 31);
+}
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+INLINE static uint32_t
+wdt_timeRebaseNeeded(uint32_t tmUnit)
+{
+	return (tmUnit != wdgCfg.timeUnit && tmUnit <= WDT_TIMEOUT_UNIT_MSEC);
+}
+
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+INLINE static uint32_t 
+wdt_convertTm2Ticks(uint32_t timeout, 
+                    WDT_CLK_SRC_e wdtClkSrc)
+{
+	uint32_t scalingFactor;
+	switch(wdtClkSrc)
+	{
+		case WDT_INTERNAL_OSC_CLK: 
+		    /* WDCLK = IRC/4 = 4MHz/4 => 1 tick = 1 usec*/
+		    scalingFactor = 1; break;		
+		case WDT_PERIPHERAL_CLK: 
+			/**
+		    /*PCLK_WDT = CCLK(72MHz)/2 = 36MHz; 
+		    /*WDCLK = PCLK_WDT/4 =>  36MHz/4 = 9MHz;
+		    /*1 tick = 1/9 usec ~ 0.1usec => 1 usec ~10ticks
+		    **/
+		    scalingFactor = 9; break;
+		case WDT_REAL_TIME_CLK:
+		    /* WDCLK = RTC_CLK/4 = 32KHz/4 => 1 tick = 1/8 msec*/
+			scalingFactor = 8; break;
+		default:
+		    return 0;
+	}
+	return (scalingFactor * timeout);
+}
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
 uint32_t 
 wdt_init(WDT_INIT_PARAM_t *pParam)
 {
@@ -84,42 +188,38 @@ wdt_init(WDT_INIT_PARAM_t *pParam)
 	return 0;
 
 }
-
-uint32_t wdt_feed(void)
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+WDT_CFG_SLEEP_ACT_e 
+wdt_determineSleepStatus()
 {
-	if(WATCHDOG_TIMER_ENABLED()) 
-	{
-		WATCHDOG_TIMER->WDFEED = WDT_FEED_VALUE;
-		WATCHDOG_TIMER->WDFEED = TOGGLE(WDT_FEED_VALUE);
-		return 1;
-	}
-	return 0;
+	return (((WATCHDOG_TIMER->WDCLKSEL & 0x3) == WDT_INTERNAL_OSC_CLK) ?\
+			 WDT_CFG_RUN_ON_SLEEP : WDT_CFG_STOP_ON_SLEEP);
 }
-INLINE static WDT_CLK_SRC_e 
-wdt_determineClkSrc(uint32_t timeUnit,
-                    uint32_t runOnSleep)
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+uint32_t wdt_reloadTimeout(uint32_t newTimeoutVal, uint32_t tmUnit)
 {
-	if(runOnSleep == TRUE)
-	{
-		return WDT_INTERNAL_OSC_CLK;
-	}
-	if(timeUnit = WDT_TIMEOUT_UNIT_USEC)
-	{
-		return WDT_PERIPHERAL_CLK;
-	}
-	if(timeUnit = WDT_TIMEOUT_UNIT_MSEC)
-	{
-		return WDT_REAL_TIME_CLK;
-	}
-	return WDT_INVALID_CLK;
+    if(wdt_timeRebaseNeeded(tmUnit))
+	   if(wdt_timeRebaseAllowed())
+		   wdt_modifyClkSrc();
+	   else
+		   return 0;
 }
-INLINE static uint32_t 
-wdt_validCfgParam(WDT_INIT_PARAM_t *pParam)
-{
-	return (pParam->clkSrc >= 0 && pParam->clkSrc < 0x3) &&
-		   (pParam->timeRebaseNeeded <= 0x1) &&
-}
-
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
 uint32_t wdt_remainingTime4Trigger()
 {
     uint32_t curTicksElapsed;
@@ -135,56 +235,28 @@ uint32_t wdt_remainingTime4Trigger()
 	/*Set the scaling factor*/
 	/*Read the current count register*/
 }
-INLINE static uint32_t
-wdt_timeRebaseAllowed()
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
+uint32_t wdt_feed(void)
 {
-	return ((WATCHDOG_TIMER->WDCLKSEL & (1 << 31)) >> 31);
-}
-INLINE static uint32_t
-wdt_timeRebaseNeeded(uint32_t tmUnit)
-{
-	return (tmUnit != wdgCfg.timeUnit && tmUnit <= WDT_TIMEOUT_UNIT_MSEC);
-}
-uint32_t wdt_reloadTimeout(uint32_t newTimeoutVal, uint32_t tmUnit)
-{
-    if(wdt_timeRebaseNeeded(tmUnit))
-	   if(wdt_timeRebaseAllowed())
-		   wdt_modifyClkSrc();
-	   else
-		   return 0;
-}
-INLINE static uint32_t 
-wdt_convertTm2Ticks(uint32_t timeout, 
-                    WDT_CLK_SRC_e wdtClkSrc)
-{
-	uint32_t scalingFactor;
-	switch(wdtClkSrc)
+	if(WATCHDOG_TIMER_ENABLED()) 
 	{
-		case WDT_INTERNAL_OSC_CLK: 
-		    /* WDCLK = IRC/4 = 4MHz/4 => 1 tick = 1 usec*/
-		    scalingFactor = 1; break;		
-		case WDT_PERIPHERAL_CLK: 
-			/**
-		    /*PCLK_WDT = CCLK(72MHz)/2 = 36MHz; 
-		    /*WDCLK = PCLK_WDT/4 =>  36MHz/4 = 9MHz;
-		    /*1 tick = 1/9 usec ~ 0.1usec => 1 usec ~10ticks
-		    **/
-		    scalingFactor = 9; break;
-		case WDT_REAL_TIME_CLK:
-		    /* WDCLK = RTC_CLK/4 = 32KHz/4 => 1 tick = 1/8 msec*/
-			scalingFactor = 8; break;
-		default:
-		    return 0;
+		WATCHDOG_TIMER->WDFEED = WDT_FEED_VALUE;
+		WATCHDOG_TIMER->WDFEED = TOGGLE(WDT_FEED_VALUE);
+		return 1;
 	}
-	return (scalingFactor * timeout);
+	return 0;
 }
-WDT_CFG_SLEEP_ACT_e 
-wdt_determineSleepStatus()
-{
-	return (((WATCHDOG_TIMER->WDCLKSEL & 0x3) == WDT_INTERNAL_OSC_CLK) ?\
-			 WDT_CFG_RUN_ON_SLEEP : WDT_CFG_STOP_ON_SLEEP);
-}
-
+/******************************************************************************
+* @function: wdt_init
+* @description: initializes the watch dog hardware block and sets config param 
+* @in: pointer to initialization parameters.
+* @return Status
+*******************************************************************************/
 void wdt_isr(void)
 {
 

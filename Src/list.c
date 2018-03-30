@@ -1,10 +1,10 @@
-/**
+/******************************************************************************
 * @file  list.c
-* @brief This file is used to provide interfaces for managing circular linked
+* @brief This file contains interfaces for managing circular linked
 * list
 * @author  SHASHANK VIMAL 
 * @date 3/21/2018
-*/
+*******************************************************************************/
 #include "lpc17xx.h"
 #include "type.h"
 #include <utils.h>
@@ -15,12 +15,12 @@ typedef struct node
 	struct node *pPrev;
 }NODE_t;
 
-/**
+/******************************************************************************
 * @function list create
 * @inout head node.
 * @see Test()
 * @return Status
-*/
+*******************************************************************************/
 uint32_t list_create(NODE_t *pHead_p)
 {
 	uint32_t retVal = FAILURE;
@@ -33,12 +33,12 @@ uint32_t list_create(NODE_t *pHead_p)
 	}
 	return retVal;
 }
-/**
+/******************************************************************************
 * @function list_insertPrevious
 * @inout head node.
 * @see Test()
 * @return Status
-*/
+*******************************************************************************/
 uint32_t list_insertPrevious(NODE_t *pSuccessor_p, NODE_t *pNode2Insert_p)
 {
 	if(pPrev != NULL && pNode2Insert_p != NULL)
@@ -52,12 +52,12 @@ uint32_t list_insertPrevious(NODE_t *pSuccessor_p, NODE_t *pNode2Insert_p)
 	}
 	return FAILURE;
 }
-/**
+/******************************************************************************
 * @function list_insertNext
 * @inout head node.
 * @see Test()
 * @return Status
-*/
+*******************************************************************************/
 uint32_t list_insertNext(NODE_t *pPredecessor, NODE_t *pNode2Insert)
 {
 	if(pPrev != NULL && pNode2Insert != NULL)
@@ -71,12 +71,12 @@ uint32_t list_insertNext(NODE_t *pPredecessor, NODE_t *pNode2Insert)
 	}
 	return FAILURE;
 }
-/**
+/******************************************************************************
 * @function list_removePrevious
 * @inout head node.
 * @see Test()
 * @return Status
-*/
+*******************************************************************************/
 uint32_t list_removePrevious(NODE_t **pNode_p, NODE_t *pSuccessor_p)
 {
 	if(pNode_p != NULL && pSuccessor_p != NULL)
@@ -89,12 +89,12 @@ uint32_t list_removePrevious(NODE_t **pNode_p, NODE_t *pSuccessor_p)
 	}
 	return FAILURE;
 }
-/**
+/******************************************************************************
 * @function list_removeNext
 * @inout head node.
 * @see Test()
 * @return Status
-*/
+*******************************************************************************/
 uint32_t list_removeNext(NODE_t **pNode_p, NODE_t *pPredecessor_p)
 {
 	if(pPrev != NULL && pNode2Insert != NULL)
@@ -107,12 +107,12 @@ uint32_t list_removeNext(NODE_t **pNode_p, NODE_t *pPredecessor_p)
 	}
 	return FAILURE;
 }
-/**
+/******************************************************************************
 * @function list_countNode
 * @inout head node.
 * @see Test()
 * @return Status
-*/
+*******************************************************************************/
 uint32_t list_countNode(NODE_t *pHead_p)
 {
 	uint32_t count  = 0;
@@ -127,12 +127,12 @@ uint32_t list_countNode(NODE_t *pHead_p)
 
 	return count;
 }
-/**
+/******************************************************************************
 * @function list_visit
 * @inout head node.
 * @see Test()
 * @return Status
-*/
+*******************************************************************************/
 uint32_t list_visit(NODE_t *pHead_p,
                     void (*visitorProcedure_p)(void *pArg_p, NODE_t *pNode_p),
 					uint32_t *pNumVisitedNode_p)
@@ -141,7 +141,7 @@ uint32_t list_visit(NODE_t *pHead_p,
 	pNode_p = pHead_p;
 	*pNumVisitedNode_p = 0;
 	
-	if(pHead_p == NULL) return FAILURE;
+	if(pHead_p == NULL || pNumVisitedNode_p == NULL) return FAILURE;
 	do
 	{
 		
