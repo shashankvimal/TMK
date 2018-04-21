@@ -8,12 +8,8 @@
 #include "lpc17xx.h"
 #include "type.h"
 #include <utils.h>
+#include "list.h"
 
-typedef struct node
-{
-	struct node *pNext;
-	struct node *pPrev;
-}NODE_t;
 
 /******************************************************************************
 * @function list create
