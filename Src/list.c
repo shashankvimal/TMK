@@ -8,7 +8,9 @@
 #include "lpc17xx.h"
 #include "type.h"
 #include <utils.h>
+#define __LIST_IMPL__ 1
 #include "list.h"
+#undef	 __LIST_IMPL__
 
 
 /******************************************************************************
@@ -37,7 +39,7 @@ uint32_t list_create(NODE_t *pHead_p)
 *******************************************************************************/
 uint32_t list_insertPrevious(NODE_t *pSuccessor_p, NODE_t *pNode2Insert_p)
 {
-	if(pPrev != NULL && pNode2Insert_p != NULL)
+	if(pSuccessor_p != NULL && pNode2Insert_p != NULL)
 	{
 		pSuccessor_p->pPrev->pNext = pNode2Insert_p;
 		pNode2Insert_p->pPrev = pSuccessor_p->pPrev;
@@ -56,7 +58,7 @@ uint32_t list_insertPrevious(NODE_t *pSuccessor_p, NODE_t *pNode2Insert_p)
 *******************************************************************************/
 uint32_t list_insertNext(NODE_t *pPredecessor, NODE_t *pNode2Insert)
 {
-	if(pPrev != NULL && pNode2Insert != NULL)
+	if(pPredecessor != NULL && pNode2Insert != NULL)
 	{
 		pNode2Insert->pNext = pPredecessor->pNext;
 		pNode2Insert->pPrev = pPredecessor;
@@ -93,11 +95,11 @@ uint32_t list_removePrevious(NODE_t **pNode_p, NODE_t *pSuccessor_p)
 *******************************************************************************/
 uint32_t list_removeNext(NODE_t **pNode_p, NODE_t *pPredecessor_p)
 {
-	if(pPrev != NULL && pNode2Insert != NULL)
+	if(pNode_p != NULL && pPredecessor_p != NULL)
 	{
 		*pNode_p = pPredecessor_p->pNext;
-		pPredecessor_p->pNext = pNode_p->pNext;
-		pNode_p->pPrev = pPredecessor_p;
+		pPredecessor_p->pNext = (*pNode_p)->pNext;
+		(*pNode_p)->pPrev = pPredecessor_p;
 		
 		return SUCCESS;
 	}
@@ -112,7 +114,8 @@ uint32_t list_removeNext(NODE_t **pNode_p, NODE_t *pPredecessor_p)
 uint32_t list_countNode(NODE_t *pHead_p)
 {
 	uint32_t count  = 0;
-	
+	NODE_t 	*pTempNode;
+
 	if(pHead_p != NULL)
 	{
 		for(pTempNode = pHead_p, count = 1;
@@ -130,11 +133,12 @@ uint32_t list_countNode(NODE_t *pHead_p)
 * @return Status
 *******************************************************************************/
 uint32_t list_visit(NODE_t *pHead_p,
-                    void (*visitorProcedure_p)(void *pArg_p, NODE_t *pNode_p),
+                    uint32_t (*visitorProcedure_p)(void *pArg_p, NODE_t *pNode_p),
+					void *pArg_p,
 					uint32_t *pNumVisitedNode_p)
 {
 	uint32_t retVal = SUCCESS;
-	pNode_p = pHead_p;
+	NODE_t *pNode_p = pHead_p;
 	*pNumVisitedNode_p = 0;
 	
 	if(pHead_p == NULL || pNumVisitedNode_p == NULL) return FAILURE;

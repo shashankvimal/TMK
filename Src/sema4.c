@@ -11,7 +11,7 @@
 
 typedef  struct sema4
 {
-	LIST_t tlist;
+	NODE_t tlist;
 	uint32_t sema4Id;
 	uint32_t ownerId;
 	uint32_t state;
