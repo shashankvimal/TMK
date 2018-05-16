@@ -8,6 +8,7 @@
 #include "type.h"
 #include <utils.h>
 #include "list.h"
+#include "task.h"
 
 NODE_t* pTmkRdyTaskQ;
 NODE_t* pTmkWaitingTaskQ;

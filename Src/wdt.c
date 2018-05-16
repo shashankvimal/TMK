@@ -379,6 +379,6 @@ void wdt_isr(void)
 	
 	nvic_enableIRQ(WDT_IRQn);
 	__DMB();
-	system_softReset();
+	//system_softReset();
 	while(1);
 }
